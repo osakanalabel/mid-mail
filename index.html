@@ -195,6 +195,18 @@
     </div>
   </div>
 
+  <!-- 削除確認ダイアログ -->
+  <div id="dialog-delete" class="hidden fixed inset-0 bg-black/40 flex items-end z-50">
+    <div class="bg-white w-full rounded-t-2xl px-6 pt-6 pb-10">
+      <h2 class="text-base font-semibold mb-1">削除しますか？</h2>
+      <p id="dialog-delete-target" class="text-sm text-gray-500 mb-4"></p>
+      <div class="flex gap-3">
+        <button id="btn-delete-cancel" class="flex-1 rounded-xl border border-gray-300 py-3 text-base font-medium">キャンセル</button>
+        <button id="btn-delete-confirm" class="flex-1 rounded-xl bg-red-500 text-white py-3 text-base font-semibold">削除</button>
+      </div>
+    </div>
+  </div>
+
   <!-- トースト通知 -->
   <div id="toast" class="hidden fixed top-4 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg"></div>
 

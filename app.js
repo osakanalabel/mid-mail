@@ -89,7 +89,6 @@ function initAuth() {
       storeToken(resp.access_token, Number(resp.expires_in) || 3600);
       $('overlay-auth').classList.add('hidden');
       await fetchAndShowEmail();
-      showSetupToast();
     },
   });
 }
@@ -113,7 +112,6 @@ function signOut() {
   accessToken = null;
   clearStoredToken();
   $('from-email').textContent = '';
-  hideSetupToast();
   $('overlay-auth').classList.remove('hidden');
 }
 
@@ -249,7 +247,7 @@ function populateSelects() {
   const rSel = $('select-recipient');
   rSel.innerHTML = recipients.length
     ? recipients.map(r => `<option value="${r.id}">${r.label}</option>`).join('')
-    : '<option value="">（送り先なし）</option>';
+    : '<option value="">（右上の歯車から設定してください）</option>';
   if (last.recipientId && recipients.find(r => r.id === last.recipientId)) {
     rSel.value = last.recipientId;
   }
@@ -257,7 +255,7 @@ function populateSelects() {
   const tSel = $('select-template');
   tSel.innerHTML = templates.length
     ? templates.map(t => `<option value="${t.id}">${t.label}</option>`).join('')
-    : '<option value="">（定型文なし）</option>';
+    : '<option value="">（右上の歯車から設定してください）</option>';
   if (last.templateId && templates.find(t => t.id === last.templateId)) {
     tSel.value = last.templateId;
   }
@@ -267,7 +265,6 @@ function populateSelects() {
 
   updatePreview();
   updateSendBtn();
-  showSetupToast();
 }
 
 function updatePreview() {
@@ -283,45 +280,6 @@ function updateSendBtn() {
   const hasR = recipients.length > 0 && $('select-recipient').value;
   const hasT = templates.length > 0 && $('select-template').value;
   $('btn-send').disabled = !(hasR && hasT);
-}
-
-function hideSetupToast() {
-  const el = $('toast-setup');
-  if (el) el.style.display = 'none';
-  const arrow = $('toast-setup-arrow');
-  if (arrow) arrow.style.display = 'none';
-}
-
-function showSetupToast() {
-  const { recipients, templates } = getData();
-  const noR = recipients.length === 0;
-  const noT = templates.length === 0;
-  if (!noR && !noT) return;
-  let el = $('toast-setup');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'toast-setup';
-    document.body.appendChild(el);
-  }
-  el.className = '';
-  el.style.cssText = 'display:block; position:fixed; top:5rem; right:0.75rem; z-index:45; max-width:7rem; padding:0.5rem 0.75rem; border-radius:0.75rem; color:#fff; font-size:0.75rem; font-weight:600; text-align:center; line-height:1.3; cursor:pointer; background:linear-gradient(225deg, #e8a42a 0%, #D4891A 50%, #b57215 100%); box-shadow:-5px 8px 16px rgba(0,0,0,0.7);';
-  el.textContent = '未設定項目があります';
-
-  let arrow = $('toast-setup-arrow');
-  if (!arrow) {
-    arrow = document.createElement('div');
-    arrow.id = 'toast-setup-arrow';
-    document.body.appendChild(arrow);
-  }
-  arrow.style.cssText = 'display:block; position:fixed; top:3.8rem; right:1.5rem; z-index:44; pointer-events:none; width:0; height:0; border-left:12px solid transparent; border-right:12px solid transparent; border-bottom:18px solid #D4891A;';
-
-  clearTimeout(el._timer);
-  el._timer = null;
-  el.onclick = () => {
-    hideSetupToast();
-    renderSettings();
-    setView('settings');
-  };
 }
 
 // ── 設定画面 ───────────────────────────────────────────────
@@ -352,6 +310,9 @@ function renderSettings() {
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+// ── 削除確認 ───────────────────────────────────────────────
+let pendingDelete = null;
 
 // ── 送り先モーダル ─────────────────────────────────────────
 let editingRecipientId = null;
@@ -386,12 +347,18 @@ function saveRecipient() {
 
 function deleteRecipient() {
   if (!editingRecipientId) return;
-  const data = getData();
-  data.recipients = data.recipients.filter(r => r.id !== editingRecipientId);
-  setData({ recipients: data.recipients });
-  closeModal('modal-recipient');
-  renderSettings();
-  populateSelects();
+  const r = getData().recipients.find(x => x.id === editingRecipientId);
+  if (!r) return;
+  $('dialog-delete-target').textContent = `「${r.label}」を削除します。`;
+  pendingDelete = () => {
+    const data = getData();
+    data.recipients = data.recipients.filter(x => x.id !== editingRecipientId);
+    setData({ recipients: data.recipients });
+    closeModal('modal-recipient');
+    renderSettings();
+    populateSelects();
+  };
+  openModal('dialog-delete');
 }
 
 // ── 定型文モーダル ─────────────────────────────────────────
@@ -453,12 +420,18 @@ function saveTemplate() {
 
 function deleteTemplate() {
   if (!editingTemplateId) return;
-  const data = getData();
-  data.templates = data.templates.filter(t => t.id !== editingTemplateId);
-  setData({ templates: data.templates });
-  closeModal('modal-template');
-  renderSettings();
-  populateSelects();
+  const t = getData().templates.find(x => x.id === editingTemplateId);
+  if (!t) return;
+  $('dialog-delete-target').textContent = `「${t.label}」を削除します。`;
+  pendingDelete = () => {
+    const data = getData();
+    data.templates = data.templates.filter(x => x.id !== editingTemplateId);
+    setData({ templates: data.templates });
+    closeModal('modal-template');
+    renderSettings();
+    populateSelects();
+  };
+  openModal('dialog-delete');
 }
 
 // ── イベント登録 ───────────────────────────────────────────
@@ -495,7 +468,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 設定画面 開閉
   $('btn-settings').addEventListener('click', () => {
-    hideSetupToast();
     renderSettings();
     setView('settings');
   });
@@ -549,6 +521,20 @@ document.addEventListener('DOMContentLoaded', () => {
   $('modal-template-save').addEventListener('click', saveTemplate);
   $('modal-template-delete').addEventListener('click', deleteTemplate);
 
+  // 削除確認ダイアログ
+  $('btn-delete-cancel').addEventListener('click', () => {
+    pendingDelete = null;
+    closeModal('dialog-delete');
+  });
+  $('btn-delete-confirm').addEventListener('click', () => {
+    closeModal('dialog-delete');
+    if (pendingDelete) {
+      const fn = pendingDelete;
+      pendingDelete = null;
+      fn();
+    }
+  });
+
   // 設定リストの編集ボタン（委譲）
   $('list-recipients').addEventListener('click', e => {
     const id = e.target.dataset.editRecipient;
@@ -560,7 +546,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // ダイアログ背景クリックで閉じる
-  ['dialog-confirm', 'dialog-signout', 'modal-recipient', 'modal-template'].forEach(id => {
+  ['dialog-confirm', 'dialog-signout', 'dialog-delete', 'modal-recipient', 'modal-template'].forEach(id => {
     $(id).addEventListener('click', e => {
       if (e.target === $(id)) closeModal(id);
     });

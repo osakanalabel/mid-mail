@@ -43,28 +43,3 @@ select {
   100% { transform: translate(-50%, 0); }
 }
 
-/* セットアップ誘導トースト（右上・吹き出し） */
-#toast-setup {
-  -webkit-animation: toast-float 2s ease-in-out infinite;
-  animation: toast-float 2s ease-in-out infinite;
-}
-#toast-setup-arrow {
-  position: fixed;
-  border: 14px solid transparent;
-  border-bottom-color: #D4891A;
-  pointer-events: none;
-}
-#toast-setup.hidden {
-  display: none;
-}
-
-@-webkit-keyframes toast-float {
-  0%   { -webkit-transform: translateY(0); }
-  50%  { -webkit-transform: translateY(-6px); }
-  100% { -webkit-transform: translateY(0); }
-}
-@keyframes toast-float {
-  0%   { transform: translateY(0); }
-  50%  { transform: translateY(-6px); }
-  100% { transform: translateY(0); }
-}
