@@ -287,9 +287,9 @@ function updateSendBtn() {
 
 function hideSetupToast() {
   const el = $('toast-setup');
-  if (el) el.classList.add('hidden');
+  if (el) el.style.display = 'none';
   const arrow = $('toast-setup-arrow');
-  if (arrow) arrow.classList.add('hidden');
+  if (arrow) arrow.style.display = 'none';
 }
 
 function showSetupToast() {
@@ -301,21 +301,19 @@ function showSetupToast() {
   if (!el) {
     el = document.createElement('div');
     el.id = 'toast-setup';
-    document.body.insertBefore(el, document.body.firstChild);
+    document.body.appendChild(el);
   }
-  el.className = 'fixed z-40 text-white text-xs font-semibold rounded-xl px-3 py-2 text-center leading-snug cursor-pointer';
-  el.style.cssText = 'max-width:7rem; position:fixed; top:5rem; right:0.75rem; pointer-events:auto; background:linear-gradient(225deg, #e8a42a 0%, #D4891A 50%, #b57215 100%); box-shadow:-5px 8px 16px rgba(0,0,0,0.7);';
+  el.className = '';
+  el.style.cssText = 'display:block; position:fixed; top:5rem; right:0.75rem; z-index:45; max-width:7rem; padding:0.5rem 0.75rem; border-radius:0.75rem; color:#fff; font-size:0.75rem; font-weight:600; text-align:center; line-height:1.3; cursor:pointer; background:linear-gradient(225deg, #e8a42a 0%, #D4891A 50%, #b57215 100%); box-shadow:-5px 8px 16px rgba(0,0,0,0.7);';
   el.textContent = '未設定項目があります';
-  el.classList.remove('hidden');
 
   let arrow = $('toast-setup-arrow');
   if (!arrow) {
     arrow = document.createElement('div');
     arrow.id = 'toast-setup-arrow';
-    document.body.insertBefore(arrow, document.body.firstChild);
+    document.body.appendChild(arrow);
   }
-  arrow.style.cssText = 'position:fixed; top:3.8rem; right:1.5rem; z-index:39; pointer-events:none; width:0; height:0; border-left:12px solid transparent; border-right:12px solid transparent; border-bottom:18px solid #D4891A;';
-  arrow.classList.remove('hidden');
+  arrow.style.cssText = 'display:block; position:fixed; top:3.8rem; right:1.5rem; z-index:44; pointer-events:none; width:0; height:0; border-left:12px solid transparent; border-right:12px solid transparent; border-bottom:18px solid #D4891A;';
 
   clearTimeout(el._timer);
   el._timer = null;
