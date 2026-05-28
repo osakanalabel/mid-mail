@@ -45,22 +45,24 @@ select {
 
 /* セットアップ誘導トースト（右上・吹き出し） */
 #toast-setup {
-  transition: opacity 0.3s;
+  -webkit-animation: toast-float 2s ease-in-out infinite;
   animation: toast-float 2s ease-in-out infinite;
 }
-#toast-setup::after {
-  content: '';
-  position: absolute;
-  top: -22px;
-  right: 10px;
+#toast-setup-arrow {
+  position: fixed;
   border: 14px solid transparent;
   border-bottom-color: #D4891A;
-}
-#toast-setup.hidden {
-  opacity: 0;
   pointer-events: none;
 }
+#toast-setup.hidden {
+  display: none;
+}
 
+@-webkit-keyframes toast-float {
+  0%   { -webkit-transform: translateY(0); }
+  50%  { -webkit-transform: translateY(-6px); }
+  100% { -webkit-transform: translateY(0); }
+}
 @keyframes toast-float {
   0%   { transform: translateY(0); }
   50%  { transform: translateY(-6px); }

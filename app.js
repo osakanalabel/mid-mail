@@ -288,6 +288,8 @@ function updateSendBtn() {
 function hideSetupToast() {
   const el = $('toast-setup');
   if (el) el.classList.add('hidden');
+  const arrow = $('toast-setup-arrow');
+  if (arrow) arrow.classList.add('hidden');
 }
 
 function showSetupToast() {
@@ -305,6 +307,16 @@ function showSetupToast() {
   el.style.cssText = 'max-width:7rem; position:fixed; top:5rem; right:0.75rem; pointer-events:auto; background:linear-gradient(225deg, #e8a42a 0%, #D4891A 50%, #b57215 100%); box-shadow:-5px 8px 16px rgba(0,0,0,0.7);';
   el.textContent = '未設定項目があります';
   el.classList.remove('hidden');
+
+  let arrow = $('toast-setup-arrow');
+  if (!arrow) {
+    arrow = document.createElement('div');
+    arrow.id = 'toast-setup-arrow';
+    document.body.insertBefore(arrow, document.body.firstChild);
+  }
+  arrow.style.cssText = 'position:fixed; top:3.8rem; right:1.5rem; z-index:39; pointer-events:none; width:0; height:0; border-left:12px solid transparent; border-right:12px solid transparent; border-bottom:18px solid #D4891A;';
+  arrow.classList.remove('hidden');
+
   clearTimeout(el._timer);
   el._timer = null;
   el.onclick = () => {
