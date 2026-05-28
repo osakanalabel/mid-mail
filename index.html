@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="app-version" content="1.0.1" />
+  <meta name="app-version" content="1.0.2" />
   <title>MID-MAIL</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <link rel="manifest" href="manifest.json" />
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="tailwind.js?v=1.0.1"></script>
-  <link rel="stylesheet" href="style.css?v=1.0.1" />
+  <script src="tailwind.js?v=1.0.2"></script>
+  <link rel="stylesheet" href="style.css?v=1.0.2" />
 </head>
 <body class="bg-cream text-gray-800 flex flex-col" style="min-height:100dvh">
 
@@ -196,6 +196,20 @@
     </div>
   </div>
 
+  <!-- 送信完了ダイアログ -->
+  <div id="dialog-sent" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-6">
+    <div class="bg-white w-full max-w-sm rounded-2xl px-6 py-8 text-center shadow-2xl">
+      <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+      </div>
+      <h2 class="text-xl font-bold mb-2 text-gray-800">送信しました</h2>
+      <p class="text-xs text-gray-500 mb-6">配信エラーはGmailの受信箱に届きます</p>
+      <button id="btn-sent-ok" class="w-full rounded-xl bg-olive text-white py-3 text-base font-semibold">OK</button>
+    </div>
+  </div>
+
   <!-- 削除確認ダイアログ -->
   <div id="dialog-delete" class="hidden fixed inset-0 bg-black/40 flex items-end z-50">
     <div class="bg-white w-full rounded-t-2xl px-6 pt-6 pb-10">
@@ -211,8 +225,8 @@
   <!-- トースト通知 -->
   <div id="toast" class="hidden fixed top-4 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg"></div>
 
-  <script src="config.js?v=1.0.1"></script>
+  <script src="config.js?v=1.0.2"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="app.js?v=1.0.1"></script>
+  <script src="app.js?v=1.0.2"></script>
 </body>
 </html>

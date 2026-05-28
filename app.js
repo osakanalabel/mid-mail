@@ -185,7 +185,7 @@ async function doSend(to, subject, body) {
   setBtnSendLoading(true);
   try {
     await sendEmail(to, subject, body, cc, bcc);
-    showToast('送信しました', 'success');
+    openModal('dialog-sent');
   } catch (e) {
     if (e.message.includes('401') || e.message.includes('invalid')) {
       accessToken = null;
@@ -521,6 +521,9 @@ document.addEventListener('DOMContentLoaded', () => {
   $('modal-template-save').addEventListener('click', saveTemplate);
   $('modal-template-delete').addEventListener('click', deleteTemplate);
 
+  // 送信完了ダイアログ
+  $('btn-sent-ok').addEventListener('click', () => closeModal('dialog-sent'));
+
   // 削除確認ダイアログ
   $('btn-delete-cancel').addEventListener('click', () => {
     pendingDelete = null;
@@ -546,7 +549,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // ダイアログ背景クリックで閉じる
-  ['dialog-confirm', 'dialog-signout', 'dialog-delete', 'modal-recipient', 'modal-template'].forEach(id => {
+  ['dialog-confirm', 'dialog-signout', 'dialog-delete', 'dialog-sent', 'modal-recipient', 'modal-template'].forEach(id => {
     $(id).addEventListener('click', e => {
       if (e.target === $(id)) closeModal(id);
     });
