@@ -271,8 +271,8 @@ function updatePreview() {
   const { templates } = getData();
   const tId = $('select-template').value;
   const t = templates.find(x => x.id === tId);
-  $('preview-subject').value = t ? t.subject : '';
-  $('preview-body').value    = t ? t.body    : '';
+  $('preview-subject').value = t ? expandPlaceholders(t.subject) : '';
+  $('preview-body').value    = t ? expandPlaceholders(t.body)    : '';
 }
 
 function updateSendBtn() {
@@ -506,7 +506,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }));
     const subject = $('preview-subject').value;
     const body    = $('preview-body').value.replace(/\r\n|\r|\n/g, '\r\n');
-    requestTokenAndSend(r.email, expandPlaceholders(subject), expandPlaceholders(body));
+    requestTokenAndSend(r.email, subject, body);
   });
 
   // 送り先
