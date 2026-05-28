@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MID-MAIL</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="manifest" href="manifest.json" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="tailwind.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="bg-cream text-gray-800 flex flex-col" style="min-height:100dvh">
+
+  <!-- ヘッダー -->
+  <header class="flex items-center justify-between px-4 py-3 bg-olive border-b border-olive-dark">
+    <div>
+      <h1 class="text-lg font-semibold leading-tight text-white">MID-MAIL</h1>
+      <p class="text-xs text-white/80 leading-tight">送信元：<span id="from-email"></span></p>
+    </div>
+    <div class="flex items-center gap-1">
+      <button id="btn-signout" aria-label="サインアウト" class="p-2 rounded-full hover:bg-olive-dark">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+        </svg>
+      </button>
+      <button id="btn-settings" aria-label="設定" class="p-2 rounded-full hover:bg-olive-dark">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- メイン：送信画面 -->
+  <main id="view-main" class="flex-1 flex flex-col px-4 pt-6 pb-4 gap-4">
+
+    <!-- 送り先 -->
+    <section>
+      <label class="block text-xs font-medium text-olive-dark mb-1">送り先</label>
+      <select id="select-recipient"
+        class="w-full rounded-xl border-0 bg-olive text-white font-medium px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-olive-dark">
+      </select>
+    </section>
+
+    <!-- 定型文 -->
+    <section>
+      <label class="block text-xs font-medium text-olive-dark mb-1">定型文</label>
+      <select id="select-template"
+        class="w-full rounded-xl border-0 bg-olive text-white font-medium px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-olive-dark">
+      </select>
+    </section>
+
+    <!-- 件名・本文（編集可能） -->
+    <section class="flex flex-col gap-2">
+      <label class="block text-xs font-medium text-olive-dark">件名</label>
+      <input id="preview-subject" type="text"
+        class="w-full rounded-xl border border-cream-dark bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-olive" />
+      <label class="block text-xs font-medium text-olive-dark">本文</label>
+      <textarea id="preview-body" rows="6"
+        class="w-full rounded-xl border border-cream-dark bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-olive resize-none"></textarea>
+    </section>
+
+  </main>
+
+  <!-- 自分にCC/BCC -->
+  <div class="px-4 pt-2 bg-cream flex gap-6">
+    <label class="flex items-center gap-2 text-sm text-gray-600 select-none">
+      <input id="chk-cc-self" type="checkbox" class="w-5 h-5 rounded" style="accent-color:#8B8B5A" />
+      自分にCC
+    </label>
+    <label class="flex items-center gap-2 text-sm text-gray-600 select-none">
+      <input id="chk-bcc-self" type="checkbox" class="w-5 h-5 rounded" style="accent-color:#8B8B5A" />
+      自分にBCC
+    </label>
+  </div>
+
+  <!-- 送信ボタン（画面下部固定） -->
+  <div class="px-4 pb-6 pt-2 bg-cream">
+    <button id="btn-send"
+      class="w-full rounded-2xl bg-amber text-white text-lg font-semibold py-4 active:bg-amber-dark transition-colors disabled:opacity-40"
+      disabled>
+      送信
+    </button>
+  </div>
+
+  <!-- 確認ダイアログ -->
+  <div id="dialog-confirm" class="hidden fixed inset-0 bg-black/40 flex items-end z-50">
+    <div class="bg-white w-full rounded-t-2xl px-6 pt-6 pb-10">
+      <h2 class="text-base font-semibold mb-1">送信しますか？</h2>
+      <p id="dialog-to" class="text-sm text-gray-500 mb-4"></p>
+      <div class="flex gap-3">
+        <button id="btn-cancel" class="flex-1 rounded-xl border border-gray-300 py-3 text-base font-medium">キャンセル</button>
+        <button id="btn-confirm" class="flex-1 rounded-xl bg-amber text-white py-3 text-base font-semibold">送信する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 設定画面（オーバーレイ） -->
+  <div id="view-settings" class="hidden fixed inset-0 bg-cream z-40 flex flex-col" style="min-height:100dvh">
+    <header class="flex items-center px-4 py-3 bg-olive border-b border-olive-dark">
+      <button id="btn-settings-close" class="p-2 mr-2 rounded-full hover:bg-olive-dark" aria-label="閉じる">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+      </button>
+      <h2 class="text-lg font-semibold text-white">設定</h2>
+    </header>
+
+    <div class="flex-1 overflow-y-auto px-4 py-6 flex flex-col gap-8">
+
+      <!-- 送り先 -->
+      <section>
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-sm font-semibold text-olive-dark">送り先</h3>
+          <button id="btn-add-recipient" class="text-amber text-sm font-medium">＋ 追加</button>
+        </div>
+        <ul id="list-recipients" class="flex flex-col gap-2"></ul>
+      </section>
+
+      <!-- 定型文 -->
+      <section>
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-sm font-semibold text-olive-dark">定型文</h3>
+          <button id="btn-add-template" class="text-amber text-sm font-medium">＋ 追加</button>
+        </div>
+        <ul id="list-templates" class="flex flex-col gap-2"></ul>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- 編集モーダル（送り先） -->
+  <div id="modal-recipient" class="hidden fixed inset-0 bg-black/40 flex items-end z-50">
+    <div class="bg-white w-full rounded-t-2xl px-6 pt-6 pb-10">
+      <h2 class="text-base font-semibold mb-4">送り先を編集</h2>
+      <input id="modal-recipient-label" type="text" placeholder="名前（表示用）"
+        class="w-full rounded-xl border border-cream-dark px-4 py-3 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-olive" />
+      <input id="modal-recipient-email" type="email" placeholder="メールアドレス"
+        class="w-full rounded-xl border border-cream-dark px-4 py-3 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-olive" />
+      <div class="flex gap-3">
+        <button id="modal-recipient-delete" class="flex-1 rounded-xl border border-red-300 text-red-500 py-3 text-sm font-medium hidden">削除</button>
+        <button id="modal-recipient-cancel" class="flex-1 rounded-xl border border-gray-300 py-3 text-sm font-medium">キャンセル</button>
+        <button id="modal-recipient-save" class="flex-1 rounded-xl bg-olive text-white py-3 text-sm font-semibold">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 編集モーダル（定型文） -->
+  <div id="modal-template" class="hidden fixed inset-0 bg-black/40 flex items-end z-50">
+    <div class="bg-white w-full rounded-t-2xl px-6 pt-6 pb-10">
+      <h2 class="text-base font-semibold mb-4">定型文を編集</h2>
+      <input id="modal-template-label" type="text" placeholder="名前（表示用）"
+        class="w-full rounded-xl border border-cream-dark px-4 py-3 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-olive" />
+      <div id="placeholder-btns-subject" class="flex gap-2 mb-2"></div>
+      <input id="modal-template-subject" type="text" placeholder="件名"
+        class="w-full rounded-xl border border-cream-dark px-4 py-3 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-olive" />
+      <div id="placeholder-btns" class="flex gap-2 mb-2"></div>
+      <textarea id="modal-template-body" placeholder="本文" rows="4"
+        class="w-full rounded-xl border border-cream-dark px-4 py-3 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-olive resize-none"></textarea>
+      <div class="flex gap-3">
+        <button id="modal-template-delete" class="flex-1 rounded-xl border border-red-300 text-red-500 py-3 text-sm font-medium hidden">削除</button>
+        <button id="modal-template-cancel" class="flex-1 rounded-xl border border-gray-300 py-3 text-sm font-medium">キャンセル</button>
+        <button id="modal-template-save" class="flex-1 rounded-xl bg-olive text-white py-3 text-sm font-semibold">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 認証オーバーレイ -->
+  <div id="overlay-auth" class="fixed inset-0 bg-cream z-50 flex flex-col items-center justify-center gap-6 px-8">
+    <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 text-olive" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+    </svg>
+    <div class="text-center">
+      <p class="text-xl font-semibold mb-1 text-olive-dark">MID-MAIL</p>
+      <p class="text-sm text-gray-500">Googleアカウントで認証してください</p>
+    </div>
+    <button id="btn-auth"
+      class="w-full rounded-2xl bg-amber text-white text-lg font-semibold py-4 active:bg-amber-dark transition-colors">
+      Googleでサインイン
+    </button>
+  </div>
+
+  <!-- サインアウト確認ダイアログ -->
+  <div id="dialog-signout" class="hidden fixed inset-0 bg-black/40 flex items-end z-50">
+    <div class="bg-white w-full rounded-t-2xl px-6 pt-6 pb-10">
+      <h2 class="text-base font-semibold mb-1">サインアウトしますか？</h2>
+      <p class="text-sm text-gray-500 mb-4">次回送信時に再度認証が必要になります。</p>
+      <div class="flex gap-3">
+        <button id="btn-signout-cancel" class="flex-1 rounded-xl border border-gray-300 py-3 text-base font-medium">キャンセル</button>
+        <button id="btn-signout-confirm" class="flex-1 rounded-xl bg-red-500 text-white py-3 text-base font-semibold">サインアウト</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- トースト通知 -->
+  <div id="toast" class="hidden fixed top-4 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg"></div>
+
+  <script src="config.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="app.js"></script>
+</body>
+</html>

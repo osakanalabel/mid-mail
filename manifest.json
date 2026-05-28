@@ -1,0 +1,17 @@
+{
+  "name": "MID-MAIL",
+  "short_name": "MID-MAIL",
+  "description": "送信専用Gmailアプリ",
+  "start_url": "/mid-mail/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F5F0E8",
+  "theme_color": "#8B8B5A",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

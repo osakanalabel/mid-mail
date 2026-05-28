@@ -1,0 +1,36 @@
+/* Tailwind CDN でカバーできない補足スタイルのみ */
+
+/* iOS Safari でフォームズームを防ぐ */
+input, select, textarea {
+  font-size: 16px;
+}
+
+/* セレクトボックスのネイティブ矢印を整える */
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  padding-right: 2.5rem;
+}
+
+/* モーダルスライドイン */
+#dialog-confirm > div,
+#modal-recipient > div,
+#modal-template > div {
+  animation: slide-up 0.2s ease-out;
+}
+
+@keyframes slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+/* トーストフェード */
+#toast {
+  transition: opacity 0.3s;
+}
+#toast.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
