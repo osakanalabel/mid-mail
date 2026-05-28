@@ -3,12 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="app-version" content="1.0.0" />
   <title>MID-MAIL</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <link rel="manifest" href="manifest.json" />
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="tailwind.js"></script>
-  <link rel="stylesheet" href="style.css" />
+  <script src="tailwind.js?v=1.0.0"></script>
+  <link rel="stylesheet" href="style.css?v=1.0.0" />
 </head>
 <body class="bg-cream text-gray-800 flex flex-col" style="min-height:100dvh">
 
@@ -210,8 +211,8 @@
   <!-- トースト通知 -->
   <div id="toast" class="hidden fixed top-4 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg"></div>
 
-  <script src="config.js"></script>
+  <script src="config.js?v=1.0.0"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="app.js"></script>
+  <script src="app.js?v=1.0.0"></script>
 </body>
 </html>
