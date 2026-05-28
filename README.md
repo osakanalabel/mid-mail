@@ -1,3 +1,3 @@
-[# mid-mail](https://osakanalabel.github.io/mid-mail/)
+<img width="186" height="186" alt="image" src="https://github.com/user-attachments/assets/4ff23c9c-faac-4c1a-939e-553714261325" />
 <br>
-<img width="216" height="216" alt="image" src="https://github.com/user-attachments/assets/01691c51-4539-4ebb-847c-eec25e26012a" />
+http://www.snkk.net/mid-mail/
