@@ -89,6 +89,7 @@ function initAuth() {
       storeToken(resp.access_token, Number(resp.expires_in) || 3600);
       $('overlay-auth').classList.add('hidden');
       await fetchAndShowEmail();
+      showSetupToast();
     },
   });
 }
@@ -112,6 +113,7 @@ function signOut() {
   accessToken = null;
   clearStoredToken();
   $('from-email').textContent = '';
+  hideSetupToast();
   $('overlay-auth').classList.remove('hidden');
 }
 
@@ -203,14 +205,25 @@ async function doSend(to, subject, body) {
 // ── UI ヘルパー ────────────────────────────────────────────
 function $(id) { return document.getElementById(id); }
 
+function resetToastAnimation(el) {
+  el.style.animation = 'none';
+  el.offsetHeight; // reflow
+  el.style.animation = '';
+}
+
 function showToast(msg, type = 'success') {
   const el = $('toast');
+  if (el._setupHandler) {
+    el.removeEventListener('click', el._setupHandler);
+    el._setupHandler = null;
+  }
   el.textContent = msg;
   el.className = [
-    'fixed top-4 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg transition-opacity',
+    'fixed top-4 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg',
     type === 'success' ? 'bg-green-600' : 'bg-red-500',
   ].join(' ');
   el.classList.remove('hidden');
+  resetToastAnimation(el);
   clearTimeout(el._timer);
   el._timer = setTimeout(() => el.classList.add('hidden'), 3000);
 }
@@ -254,6 +267,7 @@ function populateSelects() {
 
   updatePreview();
   updateSendBtn();
+  showSetupToast();
 }
 
 function updatePreview() {
@@ -269,6 +283,35 @@ function updateSendBtn() {
   const hasR = recipients.length > 0 && $('select-recipient').value;
   const hasT = templates.length > 0 && $('select-template').value;
   $('btn-send').disabled = !(hasR && hasT);
+}
+
+function hideSetupToast() {
+  const el = $('toast-setup');
+  if (el) el.classList.add('hidden');
+}
+
+function showSetupToast() {
+  const { recipients, templates } = getData();
+  const noR = recipients.length === 0;
+  const noT = templates.length === 0;
+  if (!noR && !noT) return;
+  let el = $('toast-setup');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'toast-setup';
+    document.body.insertBefore(el, document.body.firstChild);
+  }
+  el.className = 'fixed z-40 text-white text-xs font-semibold rounded-xl px-3 py-2 text-center leading-snug cursor-pointer';
+  el.style.cssText = 'max-width:7rem; position:fixed; top:5rem; right:0.75rem; pointer-events:auto; background:linear-gradient(225deg, #e8a42a 0%, #D4891A 50%, #b57215 100%); box-shadow:-5px 8px 16px rgba(0,0,0,0.7);';
+  el.textContent = '未設定項目があります';
+  el.classList.remove('hidden');
+  clearTimeout(el._timer);
+  el._timer = null;
+  el.onclick = () => {
+    hideSetupToast();
+    renderSettings();
+    setView('settings');
+  };
 }
 
 // ── 設定画面 ───────────────────────────────────────────────
@@ -442,10 +485,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 設定画面 開閉
   $('btn-settings').addEventListener('click', () => {
+    hideSetupToast();
     renderSettings();
     setView('settings');
   });
-  $('btn-settings-close').addEventListener('click', () => setView('main'));
+  $('btn-settings-close').addEventListener('click', () => {
+    setView('main');
+    populateSelects();
+  });
 
   // セレクト変更
   $('select-template').addEventListener('change', updatePreview);

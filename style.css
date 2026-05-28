@@ -26,11 +26,43 @@ select {
   to   { transform: translateY(0); }
 }
 
-/* トーストフェード */
+/* 通常トースト */
 #toast {
   transition: opacity 0.3s;
+  animation: toast-bounce-center 0.4s ease-out;
 }
 #toast.hidden {
   opacity: 0;
   pointer-events: none;
+}
+
+@keyframes toast-bounce-center {
+  0%   { transform: translate(-50%, -12px); opacity: 0; }
+  60%  { transform: translate(-50%, 4px);  opacity: 1; }
+  80%  { transform: translate(-50%, -2px); }
+  100% { transform: translate(-50%, 0); }
+}
+
+/* セットアップ誘導トースト（右上・吹き出し） */
+#toast-setup {
+  transition: opacity 0.3s;
+  animation: toast-float 2s ease-in-out infinite;
+}
+#toast-setup::after {
+  content: '';
+  position: absolute;
+  top: -22px;
+  right: 10px;
+  border: 14px solid transparent;
+  border-bottom-color: #D4891A;
+}
+#toast-setup.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@keyframes toast-float {
+  0%   { transform: translateY(0); }
+  50%  { transform: translateY(-6px); }
+  100% { transform: translateY(0); }
 }
