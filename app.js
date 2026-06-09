@@ -55,19 +55,22 @@ let accessToken = null;
 let tokenClient = null;
 
 const TOKEN_KEY = NS + ':token';
+const FORCE_CONSENT_KEY = NS + ':force_consent';
 
+// 有効な保存トークンを { token, expiresAt } で返す。無効/期限切れなら null。
 function loadStoredToken() {
   try {
     const { token, expiresAt } = JSON.parse(localStorage.getItem(TOKEN_KEY) || '{}');
-    if (token && expiresAt && Date.now() < expiresAt) return token;
+    if (token && expiresAt && Date.now() < expiresAt) return { token, expiresAt };
   } catch {}
   return null;
 }
 
 function storeToken(token, expiresInSec) {
+  // 60秒の安全マージン：API リクエスト実行中の期限切れを防ぐ
   localStorage.setItem(TOKEN_KEY, JSON.stringify({
     token,
-    expiresAt: Date.now() + expiresInSec * 1000,
+    expiresAt: Date.now() + (expiresInSec - 60) * 1000,
   }));
 }
 
@@ -75,22 +78,99 @@ function clearStoredToken() {
   localStorage.removeItem(TOKEN_KEY);
 }
 
+// レスポンスに必須スコープ（gmail.send）が含まれるか検証。
+// 欠けていればトークンを revoke し、次回強制同意フラグを立てて false を返す。
+function verifyRequiredScopes(resp) {
+  const granted = new Set((resp.scope || '').split(/\s+/));
+  if (granted.has('https://www.googleapis.com/auth/gmail.send')) return true;
+  // 取得済みトークンを即 revoke して残骸を残さない
+  google.accounts.oauth2.revoke(resp.access_token, () => {});
+  // 次回は強制同意でリトライさせる
+  localStorage.setItem(FORCE_CONSENT_KEY, 'true');
+  return false;
+}
+
 function initAuth() {
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CONFIG.clientId,
     scope: 'https://www.googleapis.com/auth/gmail.send email profile',
-    prompt: '',
+    // prompt はここでは指定しない（requestAccessToken 呼び出し時に動的に渡す）
     callback: async (resp) => {
       if (resp.error) {
         showToast('認証に失敗しました', 'error');
         return;
       }
+      // 必須スコープ検証：gmail.send が付与されなかったら保存せず中断
+      if (!verifyRequiredScopes(resp)) {
+        showToast('Gmailの送信権限が付与されませんでした。再度サインインしてください', 'error');
+        return;
+      }
+      localStorage.removeItem(FORCE_CONSENT_KEY);
       accessToken = resp.access_token;
       storeToken(resp.access_token, Number(resp.expires_in) || 3600);
       $('overlay-auth').classList.add('hidden');
       await fetchAndShowEmail();
     },
   });
+}
+
+// 無音再認証（prompt: ''）。タブ復帰時・送信直前のトークン更新で共通使用。
+// 成功で resolve、失敗（エラー or スコープ不足）で reject。
+// 呼び出し側のコールバックを一時的に差し替え、終了後に必ず元へ戻す。
+function silentReauth() {
+  return new Promise((resolve, reject) => {
+    const orig = tokenClient.callback;
+    tokenClient.callback = (resp) => {
+      tokenClient.callback = orig;
+      if (resp.error) { reject(new Error(resp.error)); return; }
+      if (!verifyRequiredScopes(resp)) {
+        reject(new Error('INSUFFICIENT_SCOPES'));
+        return;
+      }
+      localStorage.removeItem(FORCE_CONSENT_KEY);
+      accessToken = resp.access_token;
+      storeToken(resp.access_token, Number(resp.expires_in) || 3600);
+      resolve();
+    };
+    tokenClient.requestAccessToken({ prompt: '' });
+  });
+}
+
+// PWA standalone（ホーム画面アイコン）起動かどうか
+function isStandalone() {
+  return window.matchMedia('(display-mode: standalone)').matches
+    || window.navigator.standalone === true;
+}
+
+// 起動時のトークンチェック。
+// - トークンなし/失効 → サインイン画面
+// - 残り5分超 → そのまま起動
+// - 残り5分未満 → 無音再認証を試み、失敗ならサインイン画面
+async function checkTokenOnLaunch() {
+  const stored = loadStoredToken();
+
+  if (!stored) {
+    $('overlay-auth').classList.remove('hidden');
+    return;
+  }
+
+  const remaining = stored.expiresAt - Date.now();
+  if (remaining > 5 * 60 * 1000) {
+    accessToken = stored.token;
+    await fetchAndShowEmail();
+    return;
+  }
+
+  // 残り5分未満 → 無音で再認証
+  try {
+    await silentReauth();
+    await fetchAndShowEmail();
+  } catch {
+    accessToken = null;
+    clearStoredToken();
+    localStorage.setItem(FORCE_CONSENT_KEY, 'true');
+    $('overlay-auth').classList.remove('hidden');
+  }
 }
 
 async function fetchAndShowEmail() {
@@ -111,6 +191,8 @@ function signOut() {
   google.accounts.oauth2.revoke(accessToken, () => {});
   accessToken = null;
   clearStoredToken();
+  // 次回サインイン時に必ず同意・アカウント選択を通させる（旧スコープ引き継ぎ事故の防止）
+  localStorage.setItem(FORCE_CONSENT_KEY, 'true');
   $('from-email').textContent = '';
   $('overlay-auth').classList.remove('hidden');
 }
@@ -156,25 +238,20 @@ async function sendEmail(to, subject, body, cc, bcc) {
   }
 }
 
-function requestTokenAndSend(to, subject, body) {
+async function requestTokenAndSend(to, subject, body) {
   if (accessToken) {
-    doSend(to, subject, body);
-  } else {
-    // トークン切れ：再認証してから送信
-    const orig = tokenClient.callback;
-    tokenClient.callback = async (resp) => {
-      if (resp.error) {
-        showToast('認証に失敗しました', 'error');
-        tokenClient.callback = orig;
-        return;
-      }
-      accessToken = resp.access_token;
-      $('overlay-auth').classList.add('hidden');
-      tokenClient.callback = orig;
-      await fetchAndShowEmail();
-      await doSend(to, subject, body);
-    };
-    tokenClient.requestAccessToken();
+    await doSend(to, subject, body);
+    return;
+  }
+  // トークン切れ：無音再認証してから送信
+  try {
+    await silentReauth();
+    $('overlay-auth').classList.add('hidden');
+    await fetchAndShowEmail();
+    await doSend(to, subject, body);
+  } catch {
+    showToast('認証に失敗しました', 'error');
+    $('overlay-auth').classList.remove('hidden');
   }
 }
 
@@ -439,22 +516,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
   populateSelects();
 
-  // GIS読み込み完了を待って認証初期化・オーバーレイ表示
+  // ヘッダにバージョン表示（<meta name="app-version"> から）
+  const v = document.querySelector('meta[name="app-version"]')?.content || '';
+  const vEl = $('app-version');
+  if (vEl) vEl.textContent = v ? 'v' + v : '';
+
+  // PWA standalone 起動時のみスプラッシュを表示（白画面対策）。
+  // 通常ブラウザ起動時は出さず即チェックへ。
+  const showSplash = isStandalone();
+  if (!showSplash) $('overlay-splash').classList.add('hidden');
+
+  // GIS読み込み完了を待って認証初期化・起動時チェック
   // GISはasync読み込みのためポーリングで待つ
   const waitForGis = setInterval(() => {
     if (typeof google === 'undefined') return;
     clearInterval(waitForGis);
     initAuth();
-    // 保存済みトークンが有効ならオーバーレイをスキップ
-    const stored = loadStoredToken();
-    if (stored) {
-      accessToken = stored;
-      $('overlay-auth').classList.add('hidden');
-      fetchAndShowEmail();
-    }
-    // サインインボタン（明示的なサインインなのでアカウント選択を出す）
+
+    // 起動時トークンチェック。standalone のときはスプラッシュ最低1秒と並行。
+    const waits = [checkTokenOnLaunch()];
+    if (showSplash) waits.push(new Promise(r => setTimeout(r, 1000)));
+    Promise.all(waits).then(() => {
+      $('overlay-splash').classList.add('hidden');
+    });
+
+    // サインインボタン：初回・signOut直後・スコープ不足後は強制同意、
+    // それ以外は無音再認証
     $('btn-auth').addEventListener('click', () => {
-      tokenClient.requestAccessToken({ prompt: 'select_account' });
+      const forceConsent = localStorage.getItem(FORCE_CONSENT_KEY) === 'true';
+      const prompt = (forceConsent || !accessToken) ? 'consent select_account' : '';
+      tokenClient.requestAccessToken({ prompt });
     });
   }, 100);
 
@@ -480,12 +571,33 @@ document.addEventListener('DOMContentLoaded', () => {
   $('select-template').addEventListener('change', updatePreview);
   $('select-recipient').addEventListener('change', updateSendBtn);
 
-  // 送信ボタン → 確認ダイアログ
-  $('btn-send').addEventListener('click', () => {
+  // 送信ボタン → トークン鮮度チェック → 確認ダイアログ
+  $('btn-send').addEventListener('click', async () => {
     const { recipients } = getData();
     const rId = $('select-recipient').value;
     const r = recipients.find(x => x.id === rId);
     if (!r) return;
+
+    // トークン残り時間チェック。残り5分以下（失効済み含む）なら確認ダイアログを
+    // 開く前に無音再認証。送信ボタン押下時に切れていてダイアログ後にエラー、を防ぐ。
+    const stored = loadStoredToken();
+    const remaining = stored ? stored.expiresAt - Date.now() : -1;
+    if (remaining <= 5 * 60 * 1000) {
+      try {
+        await silentReauth();
+        $('overlay-auth').classList.add('hidden');
+        await fetchAndShowEmail();
+      } catch {
+        // 再認証失敗 → サインイン画面へ（確認ダイアログは開かない）
+        accessToken = null;
+        clearStoredToken();
+        localStorage.setItem(FORCE_CONSENT_KEY, 'true');
+        $('overlay-auth').classList.remove('hidden');
+        showToast('認証切れです。再度サインインしてください', 'error');
+        return;
+      }
+    }
+
     $('dialog-to').textContent = '送信先：' + r.email;
     openModal('dialog-confirm');
   });

@@ -3,20 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="app-version" content="1.0.2" />
+  <meta name="app-version" content="1.0.4" />
   <title>MID-MAIL</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <link rel="manifest" href="manifest.json" />
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="tailwind.js?v=1.0.2"></script>
-  <link rel="stylesheet" href="style.css?v=1.0.2" />
+  <script src="tailwind.js?v=1.0.4"></script>
+  <link rel="stylesheet" href="style.css?v=1.0.4" />
 </head>
 <body class="bg-cream text-gray-800 flex flex-col" style="min-height:100dvh">
 
   <!-- ヘッダー -->
   <header class="flex items-center justify-between px-4 py-3 bg-olive border-b border-olive-dark">
     <div>
-      <h1 class="text-lg font-semibold leading-tight text-white">MID-MAIL</h1>
+      <h1 class="text-lg font-semibold leading-tight text-white">
+        MID-MAIL <span id="app-version" class="text-xs font-normal text-white/50"></span>
+      </h1>
       <p class="text-xs text-white/80 leading-tight">送信元：<span id="from-email"></span></p>
     </div>
     <div class="flex items-center gap-1">
@@ -169,6 +171,12 @@
     </div>
   </div>
 
+  <!-- スプラッシュ画面（PWA standalone 起動時のみ表示） -->
+  <div id="overlay-splash" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-cream">
+    <img src="icon.svg" alt="MID-MAIL" class="w-20 h-20 mb-4" />
+    <p class="text-2xl font-bold tracking-widest text-olive">MID-MAIL</p>
+  </div>
+
   <!-- 認証オーバーレイ -->
   <div id="overlay-auth" class="fixed inset-0 bg-cream z-50 flex flex-col items-center justify-center gap-6 px-8">
     <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 text-olive" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -225,8 +233,8 @@
   <!-- トースト通知 -->
   <div id="toast" class="hidden fixed top-4 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg"></div>
 
-  <script src="config.js?v=1.0.2"></script>
+  <script src="config.js?v=1.0.4"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="app.js?v=1.0.2"></script>
+  <script src="app.js?v=1.0.4"></script>
 </body>
 </html>
