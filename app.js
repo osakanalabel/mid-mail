@@ -56,6 +56,10 @@ let tokenClient = null;
 
 const TOKEN_KEY = NS + ':token';
 const FORCE_CONSENT_KEY = NS + ':force_consent';
+const PROFILE_KEY = NS + ':profile';
+
+// silentReauth 実行中だけ error_callback を横取りするためのフック
+let authErrorHandler = null;
 
 // 有効な保存トークンを { token, expiresAt } で返す。無効/期限切れなら null。
 function loadStoredToken() {
@@ -76,6 +80,15 @@ function storeToken(token, expiresInSec) {
 
 function clearStoredToken() {
   localStorage.removeItem(TOKEN_KEY);
+}
+
+// 期限切れを含め、トークンの保存記録があるか（= 以前サインインしたことがあるか）。
+// signOut() や再認証失敗時は記録ごと消えるので false に戻る。
+function hadStoredToken() {
+  try {
+    return !!JSON.parse(localStorage.getItem(TOKEN_KEY) || '{}').token;
+  } catch {}
+  return false;
 }
 
 // レスポンスに必須スコープ（gmail.send）が含まれるか検証。
@@ -111,26 +124,41 @@ function initAuth() {
       $('overlay-auth').classList.add('hidden');
       await fetchAndShowEmail();
     },
+    // ポップアップ起動失敗・途中閉じは callback ではなくこちらに来る
+    error_callback: (err) => {
+      if (authErrorHandler) { authErrorHandler(err); return; }
+      showToast('認証に失敗しました', 'error');
+    },
   });
 }
 
-// 無音再認証（prompt: ''）。タブ復帰時・送信直前のトークン更新で共通使用。
-// 成功で resolve、失敗（エラー or スコープ不足）で reject。
-// 呼び出し側のコールバックを一時的に差し替え、終了後に必ず元へ戻す。
+// 無音再認証（prompt: ''）。送信直前のトークン更新で共通使用。
+// 成功で resolve、失敗（エラー・スコープ不足・ポップアップ起動失敗・タイムアウト）で reject。
+// callback / error_callback を一時的に差し替え、終了後に必ず元へ戻す。
+// ポップアップブロック時はどちらのコールバックも呼ばれないことがあるため、
+// タイムアウトで必ず決着させる（未解決の Promise が残るとスプラッシュ等が固まる）。
 function silentReauth() {
   return new Promise((resolve, reject) => {
     const orig = tokenClient.callback;
-    tokenClient.callback = (resp) => {
+    let timer = null;
+    const finish = (settle, arg) => {
+      clearTimeout(timer);
       tokenClient.callback = orig;
-      if (resp.error) { reject(new Error(resp.error)); return; }
+      authErrorHandler = null;
+      settle(arg);
+    };
+    timer = setTimeout(() => finish(reject, new Error('TIMEOUT')), 15 * 1000);
+    authErrorHandler = (err) => finish(reject, new Error(err?.type || 'POPUP_ERROR'));
+    tokenClient.callback = (resp) => {
+      if (resp.error) { finish(reject, new Error(resp.error)); return; }
       if (!verifyRequiredScopes(resp)) {
-        reject(new Error('INSUFFICIENT_SCOPES'));
+        finish(reject, new Error('INSUFFICIENT_SCOPES'));
         return;
       }
       localStorage.removeItem(FORCE_CONSENT_KEY);
       accessToken = resp.access_token;
       storeToken(resp.access_token, Number(resp.expires_in) || 3600);
-      resolve();
+      finish(resolve);
     };
     tokenClient.requestAccessToken({ prompt: '' });
   });
@@ -142,35 +170,29 @@ function isStandalone() {
     || window.navigator.standalone === true;
 }
 
-// 起動時のトークンチェック。
-// - トークンなし/失効 → サインイン画面
-// - 残り5分超 → そのまま起動
-// - 残り5分未満 → 無音再認証を試み、失敗ならサインイン画面
+// 起動時のトークンチェック。起動時には無音再認証を行わない
+// （ユーザー操作起点でないポップアップは iOS PWA でブロックされ得るため）。
+// - 有効なトークンあり → そのまま起動
+// - 期限切れだが以前サインイン済み（強制同意フラグなし）→ サインイン画面は出さず
+//   メイン画面で起動（送信元はキャッシュ表示）。再認証は送信ボタン押下時の
+//   鮮度チェックがユーザー操作内で行う
+// - 完全初回 / signOut後 / 強制同意フラグあり → サインイン画面
 async function checkTokenOnLaunch() {
   const stored = loadStoredToken();
 
-  if (!stored) {
-    $('overlay-auth').classList.remove('hidden');
-    return;
-  }
-
-  const remaining = stored.expiresAt - Date.now();
-  if (remaining > 5 * 60 * 1000) {
+  if (stored) {
     accessToken = stored.token;
     await fetchAndShowEmail();
     return;
   }
 
-  // 残り5分未満 → 無音で再認証
-  try {
-    await silentReauth();
-    await fetchAndShowEmail();
-  } catch {
-    accessToken = null;
-    clearStoredToken();
-    localStorage.setItem(FORCE_CONSENT_KEY, 'true');
-    $('overlay-auth').classList.remove('hidden');
+  const forceConsent = localStorage.getItem(FORCE_CONSENT_KEY) === 'true';
+  if (hadStoredToken() && !forceConsent) {
+    showCachedProfile();
+    return;
   }
+
+  $('overlay-auth').classList.remove('hidden');
 }
 
 async function fetchAndShowEmail() {
@@ -181,16 +203,30 @@ async function fetchAndShowEmail() {
     const data = await res.json();
     const name  = data.name  || '';
     const email = data.email || '';
+    if (!email) throw new Error('no email');  // エラーレスポンス等。キャッシュを空で上書きしない
     $('from-email').textContent = name ? `${name}<${email}>` : email;
+    // トークン失効中の起動時（メイン画面のまま）の表示用にキャッシュ
+    localStorage.setItem(PROFILE_KEY, JSON.stringify({ name, email }));
   } catch {
-    $('from-email').textContent = '';
+    showCachedProfile();
   }
+}
+
+// キャッシュ済みプロフィールを送信元欄に表示（トークン失効中の起動時用）
+function showCachedProfile() {
+  let text = '';
+  try {
+    const { name, email } = JSON.parse(localStorage.getItem(PROFILE_KEY) || '{}');
+    if (email) text = name ? `${name}<${email}>` : email;
+  } catch {}
+  $('from-email').textContent = text;
 }
 
 function signOut() {
   google.accounts.oauth2.revoke(accessToken, () => {});
   accessToken = null;
   clearStoredToken();
+  localStorage.removeItem(PROFILE_KEY);
   // 次回サインイン時に必ず同意・アカウント選択を通させる（旧スコープ引き継ぎ事故の防止）
   localStorage.setItem(FORCE_CONSENT_KEY, 'true');
   $('from-email').textContent = '';
