@@ -148,7 +148,19 @@ function silentReauth() {
       settle(arg);
     };
     timer = setTimeout(() => finish(reject, new Error('TIMEOUT')), 15 * 1000);
-    authErrorHandler = (err) => finish(reject, new Error(err?.type || 'POPUP_ERROR'));
+    authErrorHandler = (err) => {
+      const type = err?.type || 'POPUP_ERROR';
+      // Safari系では認証成功の直前に popup_closed が誤発火することがある
+      // （ポップアップ監視の制限による競合）。即 reject せず、本物の成功
+      // コールバックを3秒だけ待つ。popup_failed_to_open はポップアップ自体が
+      // 存在せず成功が届くことはないので即 reject。
+      if (type === 'popup_failed_to_open') {
+        finish(reject, new Error(type));
+        return;
+      }
+      clearTimeout(timer);
+      timer = setTimeout(() => finish(reject, new Error(type)), 3000);
+    };
     tokenClient.callback = (resp) => {
       if (resp.error) { finish(reject, new Error(resp.error)); return; }
       if (!verifyRequiredScopes(resp)) {
@@ -624,13 +636,21 @@ document.addEventListener('DOMContentLoaded', () => {
         $('overlay-auth').classList.add('hidden');
         await fetchAndShowEmail();
       } catch {
-        // 再認証失敗 → サインイン画面へ（確認ダイアログは開かない）
-        accessToken = null;
-        clearStoredToken();
-        localStorage.setItem(FORCE_CONSENT_KEY, 'true');
-        $('overlay-auth').classList.remove('hidden');
-        showToast('認証切れです。再度サインインしてください', 'error');
-        return;
+        // 猶予をすり抜けて成功が遅れて届いた場合、元のコールバックが
+        // トークンを保存済みのことがある。失敗扱いにする前に再確認し、
+        // 復活していればそのまま続行。
+        const recovered = loadStoredToken();
+        if (recovered) {
+          accessToken = recovered.token;
+        } else {
+          // 再認証失敗 → サインイン画面へ（確認ダイアログは開かない）
+          accessToken = null;
+          clearStoredToken();
+          localStorage.setItem(FORCE_CONSENT_KEY, 'true');
+          $('overlay-auth').classList.remove('hidden');
+          showToast('認証切れです。再度サインインしてください', 'error');
+          return;
+        }
       }
     }
 
