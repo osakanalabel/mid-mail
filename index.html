@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="app-version" content="1.0.6" />
+  <meta name="app-version" content="1.0.7" />
   <title>MID-MAIL</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <link rel="manifest" href="manifest.json" />
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="tailwind.js?v=1.0.6"></script>
-  <link rel="stylesheet" href="style.css?v=1.0.6" />
+  <script src="tailwind.js?v=1.0.7"></script>
+  <link rel="stylesheet" href="style.css?v=1.0.7" />
 </head>
 <body class="bg-cream text-gray-800 flex flex-col" style="min-height:100dvh">
 
@@ -58,7 +58,16 @@
 
     <!-- 件名・本文（編集可能） -->
     <section class="flex flex-col gap-2">
-      <label class="block text-xs font-medium text-olive-dark">件名</label>
+      <div class="flex items-center justify-between">
+        <label class="block text-xs font-medium text-olive-dark">件名</label>
+        <button id="btn-reset" disabled
+          class="flex items-center gap-1 -my-2 -mr-2 px-3 py-2 min-h-[44px] rounded-lg text-xs font-medium text-olive-dark active:bg-cream-dark disabled:opacity-30 disabled:active:bg-transparent">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M20 20v-5h-5M19.4 9A8 8 0 006.3 5.7L4 8m16 8l-2.3 2.3A8 8 0 014.6 15" />
+          </svg>
+          定型文に戻す
+        </button>
+      </div>
       <input id="preview-subject" type="text"
         class="w-full rounded-xl border border-cream-dark bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-olive" />
       <label class="block text-xs font-medium text-olive-dark">本文</label>
@@ -233,8 +242,8 @@
   <!-- トースト通知 -->
   <div id="toast" class="hidden fixed top-4 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg"></div>
 
-  <script src="config.js?v=1.0.6"></script>
+  <script src="config.js?v=1.0.7"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="app.js?v=1.0.6"></script>
+  <script src="app.js?v=1.0.7"></script>
 </body>
 </html>

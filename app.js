@@ -398,6 +398,19 @@ function updatePreview() {
   const t = templates.find(x => x.id === tId);
   $('preview-subject').value = t ? expandPlaceholders(t.subject) : '';
   $('preview-body').value    = t ? expandPlaceholders(t.body)    : '';
+  updateResetBtn();
+}
+
+// 件名・本文が定型文（プレースホルダ展開後）と違うときだけリセットを有効化。
+// 押せる状態そのものが「編集済み」のサインになる。
+function updateResetBtn() {
+  const { templates } = getData();
+  const t = templates.find(x => x.id === $('select-template').value);
+  const dirty = !!t && (
+    $('preview-subject').value !== expandPlaceholders(t.subject) ||
+    $('preview-body').value    !== expandPlaceholders(t.body)
+  );
+  $('btn-reset').disabled = !dirty;
 }
 
 function updateSendBtn() {
@@ -618,6 +631,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // セレクト変更
   $('select-template').addEventListener('change', updatePreview);
   $('select-recipient').addEventListener('change', updateSendBtn);
+
+  // 件名・本文のリセット（定型文から再展開）。編集検知でボタンの有効/無効を更新
+  $('preview-subject').addEventListener('input', updateResetBtn);
+  $('preview-body').addEventListener('input', updateResetBtn);
+  $('btn-reset').addEventListener('click', updatePreview);
 
   // 送信ボタン → トークン鮮度チェック → 確認ダイアログ
   $('btn-send').addEventListener('click', async () => {
